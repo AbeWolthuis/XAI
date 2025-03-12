@@ -1,13 +1,11 @@
-from anytree.importer import DictImporter, JsonImporter
+from anytree.importer import DictImporter
 from anytree import search
 import os
 import json
 
 LOCAL = True
 
-# Our final output: A list of lists of node names.
-output = []
-
+# 1) Load the tree
 def load_json_tree_locally(file_name="coffee.json"):
     """
     Loads the coffee.json file from the same directory
@@ -17,6 +15,26 @@ def load_json_tree_locally(file_name="coffee.json"):
     with open(json_path, "r", encoding="utf-8") as f:
         data = json.load(f)
     return data
+
+if LOCAL:
+    # Should be path relative
+    json_data = load_json_tree_locally("coffee.json")
+    importer = DictImporter()
+    tree = importer.import_(json_data)
+
+    starting_node_name = 'getCoffee'
+else:
+    # json_tree: the JSON object representing the goal tree
+    # starting_node_name: the name of the node from which to start enumerating
+    importer = DictImporter()
+    tree = importer.import_(json_tree) #ignore
+
+
+
+# Our final output: A list of lists of node names.
+output = []
+
+
 
 
 
@@ -65,19 +83,6 @@ def get_traces(node):
     return []
 
 
-# 1) Load the tree
-if LOCAL:
-    # Should be path relative
-    json_data = load_json_tree_locally("coffee.json")
-    importer = DictImporter()
-    tree = importer.import_(json_data)
-
-    starting_node_name = 'getCoffee'
-else:
-    # json_tree: the JSON object representing the goal tree
-    # starting_node_name: the name of the node from which to start enumerating
-    importer = DictImporter()
-    tree = importer.import_(json_tree) #ignore
 
 
 # 2) Find the node in the tree with name == starting_node_name
