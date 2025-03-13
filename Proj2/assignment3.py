@@ -56,7 +56,9 @@ def execution_trace(node, beliefs, goal, trace=None, alltraces = []):
     if hasattr(node, "pre") and not any(p in beliefs for p in node.pre):
           return []  # Cannot execute this node
 
-    # SEQ and AND nodes: Execute children **in order**
+    # SEQ and AND nodes: Execute children
+    # apparently this should be done without using the sequence attribute?
+    # but 1) why is it even there 2) how does that work with working the tree in order?
     if node.type in ["SEQ", "AND"]:
         ordered_children = sorted(node.children, key=lambda x: getattr(x, "sequence", float("inf")))
         current_trace = trace + [node]
@@ -71,7 +73,6 @@ def execution_trace(node, beliefs, goal, trace=None, alltraces = []):
                         break  # Stop after picking a valid OR branch
 
                 current_trace = current_trace + temp_trace  # Update trace with OR path
-
             else:
                 # Normal execution
                 new_traces = execution_trace(child, beliefs, goal, current_trace, alltraces)
