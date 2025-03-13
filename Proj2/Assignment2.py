@@ -27,7 +27,7 @@ def build_annotated_tree(data, norm, parent=None):
         build_annotated_tree(child, norm, parent=node)
 
     # any child with violation means this node is a violatoin
-    if node.type == "SEQ":
+    if node.type in ["SEQ", "AND"]:
         node.violation = any(child.violation for child in getattr(node, 'children', []))
     
     # all children have to be with violation for this node to be a violation too
