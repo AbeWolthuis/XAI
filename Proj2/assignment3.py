@@ -35,59 +35,52 @@ def build_annotated_tree(data, norm, parent=None):
 
     return node
 
-def execution_trace(node, beliefs, goal, trace=None, alltraces = []):
+def execution_trace(node, beliefs, goal, trace=None):
     if trace is None:
         trace = []  # Start with an empty execution trace
-    
-    if node.violation == True:
-      return []
 
-    # Base case: if goal is achieved, return the trace
+    if getattr(node, "violation", False):
+        return []  # If the node is invalid, return no trace
+
+    # If we reach an action node, check if it achieves the goal
     if node.type == "ACT":
-      if hasattr(node, "post") and node.post == goal:
-        trace = trace + [node]
-        return [trace]  
-      # check preconditions
-      elif not hasattr(node, "pre") or any(p in beliefs for p in node.pre):
-        trace = trace + [node]
-        return [trace] 
-    
-    # If this node has preconditions, check if they match current beliefs
-    if hasattr(node, "pre") and not any(p in beliefs for p in node.pre):
-          return []  # Cannot execute this node
+        if hasattr(node, "post") and goal in node.post:
+            return [trace + [node]]  # Goal achieved, return the trace
+        elif not hasattr(node, "pre") or all(p in beliefs for p in node.pre):
+            new_beliefs = beliefs.union(set(getattr(node, "post", [])))  # Update beliefs
+            return [trace + [node]] 
+        else:
+            return []  # Preconditions not met, cannot execute
 
-    # SEQ and AND nodes: Execute children
-    # apparently this should be done without using the sequence attribute?
-    # but 1) why is it even there 2) how does that work with working the tree in order?
-    if node.type in ["SEQ", "AND"]:
-        ordered_children = sorted(node.children, key=lambda x: getattr(x, "sequence", float("inf")))
-        current_trace = trace + [node]
-        for i, child in enumerate(ordered_children):
-            if child.type == "OR":
-                # OR child: Add OR node first, then pick a valid child path
-                temp_trace = [child]  # Start with the OR node
-                for or_child in child.children:
-                    or_traces = execution_trace(or_child, beliefs, goal, temp_trace, alltraces)
-                    if or_traces:
-                        temp_trace = or_traces[0]  # Pick first valid OR path
-                        break  # Stop after picking a valid OR branch
-
-                current_trace = current_trace + temp_trace  # Update trace with OR path
-            else:
-                # Normal execution
-                new_traces = execution_trace(child, beliefs, goal, current_trace, alltraces)
-                if new_traces:
-                    current_trace = new_traces[0]
-
-        alltraces.append(current_trace)
-
-    # try all paths
+    # Handle OR nodes
     if node.type == "OR":
+        total_traces = []
         for child in node.children:
-            child_traces = execution_trace(child, beliefs, goal, trace + [node], alltraces)
-            
+            child_traces = execution_trace(child, beliefs.copy(), goal, trace + [node])
+            total_traces.extend(child_traces)  # Collect all valid traces
+        return total_traces
 
-    return alltraces  # Return all valid execution traces
+    # Handle SEQ nodes
+    if node.type == "SEQ":
+        current_trace = trace + [node]  # Include the SEQ node itself in the trace
+        current_beliefs = beliefs.copy()  # Track beliefs across steps
+
+        for child in node.children:
+            child_traces = execution_trace(child, current_beliefs, goal, current_trace)
+            if not child_traces:  # If any child fails, the whole sequence fails
+                return []
+            
+            # Take the first successful path (expand to all if needed)
+            current_trace = child_traces[0]
+
+            # Update beliefs for next step
+            if hasattr(current_trace[-1], "post"):
+                current_beliefs.update(set(current_trace[-1].post))
+
+        return [current_trace]  # Return the successful execution trace
+
+    return trace  # Return execution trace
+
 
 def pick_lowest_cost_trace(tracelist, importance):
   trace_cost = {}
@@ -114,7 +107,7 @@ def pick_lowest_cost_trace(tracelist, importance):
   return final_list[0] if len(final_list) == 1 else final_list
   
 root = build_annotated_tree(json_tree, norm)
-tracelist = execution_trace(root, beliefs, goal)
+tracelist = execution_trace(root, set(beliefs), goal)
 if tracelist:
   output = pick_lowest_cost_trace(tracelist, preferences)
 else:
