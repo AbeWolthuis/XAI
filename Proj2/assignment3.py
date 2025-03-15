@@ -61,7 +61,7 @@ def execution_trace(node, beliefs, goal, trace=None):
         return total_traces
 
     # Handle SEQ nodes
-    if node.type == "SEQ":
+    if node.type in ["SEQ", "AND"]:
         current_trace = trace + [node]  # Include the SEQ node itself in the trace
         current_beliefs = beliefs.copy()  # Track beliefs across steps
 
