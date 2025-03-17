@@ -115,7 +115,4 @@ def pick_lowest_cost_trace(tracelist, importance):
   
 root = build_annotated_tree(json_tree, norm)
 tracelist = execution_trace(root, set(beliefs), goal)
-if tracelist:
-  output = pick_lowest_cost_trace(tracelist, preferences)
-else:
-  output = tracelist
+output = pick_lowest_cost_trace(tracelist, preferences)
