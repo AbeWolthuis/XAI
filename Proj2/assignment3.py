@@ -1,6 +1,6 @@
-'''run only in colab or in prairielearn environment'''
+'''runs only in colab or in prairielearn environment'''
 
-
+from random import sample
 from anytree import AnyNode
 import numpy as np
 def build_annotated_tree(data, norm, parent=None):
@@ -61,7 +61,7 @@ def execution_trace(node, beliefs, goal, trace=None):
         return total_traces
 
     # Handle SEQ nodes
-    if node.type in ["SEQ", "AND"]:
+    if node.type == "SEQ":
         current_trace = trace + [node]  # Include the SEQ node itself in the trace
         current_beliefs = beliefs.copy()  # Track beliefs across steps
 
@@ -82,7 +82,10 @@ def execution_trace(node, beliefs, goal, trace=None):
     return trace  # Return execution trace
 
 
+# if two traces have the same cost, pick random
 def pick_lowest_cost_trace(tracelist, importance):
+  if tracelist == []:
+    return tracelist
   trace_cost = {}
   for trace in tracelist:
     cost = np.array([0,0,0])
@@ -90,11 +93,11 @@ def pick_lowest_cost_trace(tracelist, importance):
     for node in trace:
       if node.type == "ACT":
         cost = cost + np.array(node.costs)
-    position = tracelist.index(trace) 
+    position = tracelist.index(trace)
     trace_cost[position] = cost
 
   # costs are always [quality, price, time]
-  priority_order = importance[1] 
+  priority_order = importance[1]
 
   sorted_costs = sorted(trace_cost.items(), key=lambda item: tuple(item[1][i] for i in priority_order))
 
@@ -103,8 +106,12 @@ def pick_lowest_cost_trace(tracelist, importance):
   best_traces_indices = [index for index, cost in sorted_costs if np.array_equal(cost, best_cost)]
 
     # Convert best traces to name lists
+  
   final_list = [[node.name for node in tracelist[idx]] for idx in best_traces_indices]
-  return final_list[0] if len(final_list) == 1 else final_list
+  if len(final_list) > 1:
+    final_list = sample(final_list, 1)
+  else:
+    return final_list[0]
   
 root = build_annotated_tree(json_tree, norm)
 tracelist = execution_trace(root, set(beliefs), goal)
